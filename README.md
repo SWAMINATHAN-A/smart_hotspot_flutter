@@ -5,6 +5,14 @@
 
 ---
 
+## 🚀 Downloads & Links
+
+- 📱 **Android**: [Download APK (Latest Release)](https://github.com/SWAMINATHAN-A/smart_hotspot_flutter/releases/latest)
+- 🍏 **iOS**: [Download via TestFlight](https://testflight.apple.com/join/placeholder_link) *(Currently in private beta)*
+- 🌐 **Web Dashboard & Learning Hub**: [Access the Web Equivalent](https://SWAMINATHAN-A.github.io/smart_hotspot_flutter/)
+
+---
+
 ## Table of Contents
 
 - [Overview](#overview)

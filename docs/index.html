@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Hotspot Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .detailed-content {
+            text-align: left;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #e2e8f0;
+        }
+        .detailed-content h3 {
+            border-bottom: 1px solid #38bdf8;
+            padding-bottom: 10px;
+            margin-top: 40px;
+            color: #38bdf8;
+        }
+        .detailed-content p {
+            margin-top: 15px;
+            line-height: 1.8;
+            font-size: 1.05rem;
+        }
+        .detailed-content ul {
+            margin-top: 15px;
+            padding-left: 20px;
+        }
+        .detailed-content li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        .inventor-card {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .inventor-card h4 {
+            color: #38bdf8;
+            margin-bottom: 5px;
+            font-size: 1.2rem;
+        }
+        .inventor-card p {
+            margin: 2px 0;
+            font-size: 0.95rem;
+            color: #94a3b8;
+        }
+        .inventor-card a {
+            color: #38bdf8;
+            text-decoration: none;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 10px 20px;
+            transition: 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active {
+            color: #38bdf8;
+            border-bottom: 2px solid #38bdf8;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">Smart Hotspot <span>Manager</span></div>
+        <ul class="nav-links">
+            <li><a href="#home">Home</a></li>
+            <li><a href="javascript:void(0)" onclick="showTab('learn')" id="learn-nav">Learn</a></li>
+            <li><a href="javascript:void(0)" onclick="showTab('inventors')" id="inventors-nav">Inventors</a></li>
+        </ul>
+    </nav>
+
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h1>Advanced <br><span class="gradient-text">Smart Hotspot Manager</span></h1>
+            <p>A professional-grade networking tool designed for granular control over mobile tethering. Monitor every byte, enforce strict bandwidth quotas, and secure your network with domain-level filtering—all in a zero-root environment.</p>
+            <div class="hero-buttons">
+                <!-- Corrected Android Download link -->
+                <a href="smart-hotspot-manager.apk" download="smart-hotspot-manager.apk" class="btn-primary">Download Android APK</a>
+                <!-- Link to iOS Web Version -->
+                <a href="ios_version/index.html" class="btn-secondary">iOS Version</a>
+            </div>
+        </div>
+        <div class="hero-image">
+            <div class="glass-mockup">
+                <div class="mockup-header">Network Performance</div>
+                <div class="mockup-chart"></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="main-tabs" style="padding: 60px 5%;">
+        <div style="display: flex; justify-content: center; margin-bottom: 40px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+            <button class="tab-btn active" id="btn-learn" onclick="showTab('learn')">Learn (Technical Analysis)</button>
+            <button class="tab-btn" id="btn-inventors" onclick="showTab('inventors')">Inventors</button>
+        </div>
+
+        <div id="learn" class="tab-content active">
+            <div class="detailed-content">
+                <h2>Technical Architecture & Implementation Deep Dive</h2>
+                
+                <h3>1. User-Space Forwarding Proxy Engine</h3>
+                <p>The core of the Smart Hotspot Manager is a high-performance HTTP/HTTPS forwarding proxy server implemented using Dart's asynchronous TCP socket framework (`dart:io`). Traditional Android networking tools often require root access to manipulate `iptables` for traffic interception. Our solution bypasses this requirement by binding a `RawServerSocket` to the hotspot's gateway interface (standardized at `192.168.43.1` on port `8080`).</p>
+                <p>When a client device connects to the hotspot and configures its manual proxy, every outbound request is received by our Dart isolate. The system handles the entire lifecycle of the socket connection, from the initial SYN/ACK handshake to the final teardown.</p>
+
+                <h3>2. HTTP CONNECT & Secure Tunneling</h3>
+                <p>Handling encrypted HTTPS traffic without performing MITM (which would break security certificates) requires the implementation of the HTTP CONNECT method. When a client requests a secure site, it sends an unencrypted header: `CONNECT targethost.com:443 HTTP/1.1`. The Smart Hotspot Manager parses this plaintext header to identify the destination before any encryption begins.</p>
+                <p>Once the destination is validated against security rules, the app establishes a raw TCP connection to the remote server and pipes the byte stream symmetrically between the client and the server. This "blind piping" ensures that while the content remains private, the metadata (destination and throughput) is fully observable.</p>
+
+                <h3>3. Layer-7 Deep Packet Inspection (DPI)</h3>
+                <p>The firewall system utilizes a specialized form of Deep Packet Inspection. Unlike packet sniffers that analyze every fragment, our engine inspects the "Client Hello" or the initial HTTP "Host" header. By analyzing the Server Name Indication (SNI) in the TLS handshake, we can determine exactly which domain is being accessed even if the data itself is encrypted. If the domain exists in our `SecurityRulesManager` blacklist, the connection is pre-emptively terminated before the TLS handshake completes.</p>
+
+                <h3>4. Token Bucket Throttling Mechanism</h3>
+                <p>To enforce bandwidth limits (e.g., 1024 Kbps), the system implements a software-defined Token Bucket algorithm. We calculate the required delay for every chunk of data forwarded through the socket. If a chunk of `N` bytes is processed and the limit is `L` bytes/sec, the system introduces an artificial latency using `Future.delayed()`. This approach is superior to packet dropping as it allows TCP's congestion control algorithms to adjust naturally, providing a smoother user experience without wasting network resources.</p>
+
+                <h3>5. Concurrency & Performance Optimization</h3>
+                <ul>
+                    <li><strong>Asynchronous Isolates:</strong> The networking logic runs on Dart's event loop, ensuring that I/O operations do not block the main UI thread.</li>
+                    <li><strong>Foreground Service Persistence:</strong> Using `flutter_foreground_task`, the proxy server is bound to a persistent Android Service. This prevents the OS from killing the networking process when the app is in the background or the device is in low-power mode.</li>
+                    <li><strong>Provider Pattern State Management:</strong> Traffic metrics (Bytes per second) are aggregated and debounced using the Provider pattern, ensuring that the real-time UI charts are updated efficiently without excessive rebuilds.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="inventors" class="tab-content">
+            <div class="detailed-content">
+                <h2>Project Inventors</h2>
+                
+                <div class="inventor-card">
+                    <h4>Dr. Swaminathan.A</h4>
+                    <p>Assistant Professor Sr</p>
+                    <p>School of Computer Science Engineering,</p>
+                    <p>Vellore Institute of Technology, Chennai</p>
+                    <p>Email: <a href="mailto:swaminathan.a@vit.ac.in">swaminathan.a@vit.ac.in</a></p>
+                </div>
+
+                <div class="inventor-card">
+                    <h4>Harish K</h4>
+                    <p>Student, 24BYB1178</p>
+                    <p>School of Computer Science Engineering,</p>
+                    <p>Vellore Institute of Technology, Chennai</p>
+                    <p>Email: <a href="mailto:harish.k2024b@vitstudent.ac.in">harish.k2024b@vitstudent.ac.in</a></p>
+                </div>
+
+                <div class="inventor-card">
+                    <h4>Darshak RK</h4>
+                    <p>Student, 24BYB1177</p>
+                    <p>School of Computer Science Engineering,</p>
+                    <p>Vellore Institute of Technology, Chennai</p>
+                    <p>Email: <a href="mailto:darshak.rk2024@vitstudent.ac.in">darshak.rk2024@vitstudent.ac.in</a></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        function showTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            // Show selected tab
+            document.getElementById(tabId).classList.add('active');
+            document.getElementById('btn-' + tabId).classList.add('active');
+            
+            // Smooth scroll to tabs if coming from nav
+            document.getElementById('main-tabs').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Handle navigation active state
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('section');
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= (sectionTop - 200)) {
+                    current = section.getAttribute('id');
+                }
+            });
+            document.querySelectorAll('.nav-links a').forEach(a => {
+                a.classList.remove('active');
+                if (a.getAttribute('href').substring(1) === current) {
+                    a.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
